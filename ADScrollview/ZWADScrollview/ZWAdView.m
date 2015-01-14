@@ -7,7 +7,6 @@
 //
 
 #import "ZWAdView.h"
-#define KPCheight 20    //pageController高度
 #import "UIImageView+WebCache.h"
 
 
@@ -33,23 +32,41 @@
 }
 
 -(void)setPageControl{
-    self.adPageControl=[[UIPageControl alloc]initWithFrame:CGRectMake(0, self.adScrollView.bounds.size.height-KPCheight, self.adScrollView.bounds.size.width, KPCheight)];
-    self.adPageControl.numberOfPages=1;
-    [self addSubview:self.adPageControl];
-    self.adPageControl.center=CGPointMake(self.center.x, self.adPageControl.center.y);
+    // UIPageControl
+    self.pageControl = [[UIPageControl alloc] init];
+    self.pageControl.translatesAutoresizingMaskIntoConstraints = NO;
+    self.pageControl.enabled = NO;
+    self.pageControl.numberOfPages = self.adDataArray.count;
+    self.pageControl.currentPage = 0;
+    [self addSubview:self.pageControl];
+    
+    NSArray *pageControlVConstraints = [NSLayoutConstraint constraintsWithVisualFormat:@"V:[pageControl]-0-|"
+                                                                               options:kNilOptions
+                                                                               metrics:nil
+                                                                                 views:@{@"pageControl": self.pageControl}];
+    
+    NSArray *pageControlHConstraints = [NSLayoutConstraint constraintsWithVisualFormat:@"H:[pageControl]-|"
+                                                                               options:kNilOptions
+                                                                               metrics:nil
+                                                                                 views:@{@"pageControl": self.pageControl}];
+    
+    self.pageControlConstraints = [NSMutableArray arrayWithArray:pageControlVConstraints];
+    [self.pageControlConstraints addObjectsFromArray:pageControlHConstraints];
+    
+    [self addConstraints:self.pageControlConstraints];
 }
 
 #pragma mark -加载并播放广告数据内容
 -(void)loadAdDataThenStart{
     [self.adScrollView setContentSize:CGSizeMake(self.adScrollView.bounds.size.width*(self.adDataArray.count+2), self.adScrollView.bounds.size.height)];
-    self.adPageControl.numberOfPages=self.adDataArray.count;
+    self.pageControl.numberOfPages=self.adDataArray.count;
     for (int i=0; i<self.adDataArray.count; i++) {
         UIImageView *adImageView=[[UIImageView alloc]initWithFrame:CGRectMake((i+1)*self.adScrollView.bounds.size.width, 0, self.adScrollView.bounds.size.width,self.adScrollView.bounds.size.height)];
         adImageView.tag=i;
         adImageView.userInteractionEnabled=YES;
+        adImageView.contentMode = UIViewContentModeScaleToFill;
         [adImageView sd_setImageWithURL:[NSURL URLWithString:[[NSString alloc] initWithFormat:@"%@",self.adDataArray[i]]] placeholderImage:[UIImage imageNamed:self.placeImageSource]];
         [adImageView addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(adImgClick)]];
-        
         [self.adScrollView addSubview:adImageView];
     }
     
@@ -79,16 +96,16 @@
     CGFloat pageWidth = self.adScrollView.frame.size.width;
     int currentPage = self.adScrollView.contentOffset.x/pageWidth;
     if (currentPage == 0) {
-        self.adPageControl.currentPage = self.adPageControl.numberOfPages-1;
+        self.pageControl.currentPage = self.pageControl.numberOfPages-1;
     }
-    else if (currentPage == self.adPageControl.numberOfPages+1) {
-        self.adPageControl.currentPage = 0;
+    else if (currentPage == self.pageControl.numberOfPages+1) {
+        self.pageControl.currentPage = 0;
     }
     else {
-        self.adPageControl.currentPage = currentPage-1;
+        self.pageControl.currentPage = currentPage-1;
     }
     
-    __block NSInteger currPageNumber = self.adPageControl.currentPage;
+    __block NSInteger currPageNumber = self.pageControl.currentPage;
     CGSize viewSize = self.adScrollView.frame.size;
     CGRect rect = CGRectMake((currPageNumber+2)*pageWidth, 0, viewSize.width, viewSize.height);
     
@@ -96,7 +113,7 @@
         [self.adScrollView scrollRectToVisible:rect animated:NO];
     } completion:^(BOOL finished) {
         currPageNumber++;
-        if (currPageNumber == self.adPageControl.numberOfPages) {
+        if (currPageNumber == self.pageControl.numberOfPages) {
             [self.adScrollView setContentOffset:CGPointMake(self.adScrollView.bounds.size.width, 0)];
             currPageNumber = 0;
         }
@@ -104,13 +121,13 @@
     
     currentPage = self.adScrollView.contentOffset.x/pageWidth;
     if (currentPage == 0) {
-        self.adPageControl.currentPage = self.adPageControl.numberOfPages-1;
+        self.pageControl.currentPage = self.pageControl.numberOfPages-1;
     }
-    else if (currentPage == self.adPageControl.numberOfPages+1) {
-        self.adPageControl.currentPage = 0;
+    else if (currentPage == self.pageControl.numberOfPages+1) {
+        self.pageControl.currentPage = 0;
     }
     else {
-        self.adPageControl.currentPage = currentPage-1;
+        self.pageControl.currentPage = currentPage-1;
     }
 }
 #pragma mark---- UIScrollView delegate methods
@@ -119,17 +136,17 @@
         NSInteger currentAdPage;
         currentAdPage=self.adScrollView.contentOffset.x/self.adScrollView.bounds.size.width;
         if (currentAdPage==0) {
-            [scrollView scrollRectToVisible:CGRectMake(self.adScrollView.bounds.size.width*self.adPageControl.numberOfPages, 0, self.adScrollView.bounds.size.width, self.adScrollView.bounds.size.height) animated:NO];
-            currentAdPage=self.adPageControl.numberOfPages-1;
+            [scrollView scrollRectToVisible:CGRectMake(self.adScrollView.bounds.size.width*self.pageControl.numberOfPages, 0, self.adScrollView.bounds.size.width, self.adScrollView.bounds.size.height) animated:NO];
+            currentAdPage=self.pageControl.numberOfPages-1;
         }
-        else if (currentAdPage==(self.adPageControl.numberOfPages+1)) {
+        else if (currentAdPage==(self.pageControl.numberOfPages+1)) {
             [scrollView scrollRectToVisible:CGRectMake(self.adScrollView.bounds.size.width, 0, self.adScrollView.bounds.size.width, self.adScrollView.bounds.size.height) animated:NO];
             currentAdPage=0;
         }
         else{
             currentAdPage=currentAdPage-1;
         }
-        self.adPageControl.currentPage=currentAdPage;
+        self.pageControl.currentPage=currentAdPage;
     
     if (self.adAutoplay) {
         if (!self.adLoopTimer) {
@@ -148,8 +165,77 @@
     }
 }
 
+- (void)setPageControlPosition:(ZWPageControlPosition)pageControlPosition
+{
+    NSString *vFormat = nil;
+    NSString *hFormat = nil;
+    
+    switch (pageControlPosition) {
+        case ZWPageControlPosition_TopLeft: {
+            vFormat = @"V:|-0-[pageControl]";
+            hFormat = @"H:|-[pageControl]";
+            break;
+        }
+            
+        case ZWPageControlPosition_TopCenter: {
+            vFormat = @"V:|-0-[pageControl]";
+            hFormat = @"H:|[pageControl]|";
+            break;
+        }
+            
+        case ZWPageControlPosition_TopRight: {
+            vFormat = @"V:|-0-[pageControl]";
+            hFormat = @"H:[pageControl]-|";
+            break;
+        }
+            
+        case ZWPageControlPosition_BottomLeft: {
+            vFormat = @"V:[pageControl]-0-|";
+            hFormat = @"H:|-[pageControl]";
+            break;
+        }
+            
+        case ZWPageControlPosition_BottomCenter: {
+            vFormat = @"V:[pageControl]-0-|";
+            hFormat = @"H:|[pageControl]|";
+            break;
+        }
+            
+        case ZWPageControlPosition_BottomRight: {
+            vFormat = @"V:[pageControl]-0-|";
+            hFormat = @"H:[pageControl]-|";
+            break;
+        }
+    }
+    
+    [self removeConstraints:self.pageControlConstraints];
+    
+    NSArray *pageControlVConstraints = [NSLayoutConstraint constraintsWithVisualFormat:vFormat
+                                                                               options:kNilOptions
+                                                                               metrics:nil
+                                                                                 views:@{@"pageControl": self.pageControl}];
+    
+    NSArray *pageControlHConstraints = [NSLayoutConstraint constraintsWithVisualFormat:hFormat
+                                                                               options:kNilOptions
+                                                                               metrics:nil
+                                                                                 views:@{@"pageControl": self.pageControl}];
+    
+    [self.pageControlConstraints removeAllObjects];
+    [self.pageControlConstraints addObjectsFromArray:pageControlVConstraints];
+    [self.pageControlConstraints addObjectsFromArray:pageControlHConstraints];
+    
+    [self addConstraints:self.pageControlConstraints];
+    
+}
+
+
+- (void)setHidePageControl:(BOOL)hidePageControl
+{
+    self.pageControl.hidden = hidePageControl;
+}
+
 #pragma mark - 点击
 -(void)adImgClick{
-    [self.delegate adView:self didDeselectAdAtNum:self.adPageControl.currentPage];
+    [self.delegate adView:self didDeselectAdAtNum:self.pageControl.currentPage];
 }
 @end
